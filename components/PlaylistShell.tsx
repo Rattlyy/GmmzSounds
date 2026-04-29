@@ -828,7 +828,7 @@ export default function PlaylistShell({
                           {fmtBytes(song.size)}
                         </td>
                         <td className="px-2 py-1.5">
-                          <div className="flex items-center justify-end gap-1 opacity-0 group-hover/row:opacity-100 transition-opacity">
+                          <div className="flex items-center justify-end gap-1 transition-opacity">
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button

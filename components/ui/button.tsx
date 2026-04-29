@@ -9,16 +9,16 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground [a]:hover:bg-primary/80",
+        default: "bg-white text-black border-border hover:bg-white/90",
         outline:
-          "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+          "border-border bg-white text-black hover:bg-white/90 hover:text-black aria-expanded:bg-white aria-expanded:text-black dark:border-border dark:bg-white dark:hover:bg-white/90",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
+          "bg-white text-black border-border hover:bg-white/90 aria-expanded:bg-white aria-expanded:text-black",
         ghost:
-          "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
+          "bg-white text-black hover:bg-white/90 hover:text-black aria-expanded:bg-white aria-expanded:text-black",
         destructive:
-          "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
-        link: "text-primary underline-offset-4 hover:underline",
+          "bg-white text-black border-border hover:bg-white/90 focus-visible:border-ring/40 focus-visible:ring-ring/20",
+        link: "text-black underline-offset-4 hover:underline",
       },
       size: {
         default:

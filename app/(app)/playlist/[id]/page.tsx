@@ -241,7 +241,7 @@ async function SongRow({
       <td className="px-4 py-1.5 text-right text-muted-foreground tabular-nums hidden lg:table-cell">
         {fmtBytes(enriched.size)}
       </td>
-      <td className="px-2 py-1.5">
+      <td className="px-2 py-1.5 table-cell">
         <SongActions
           playlistId={playlistId}
           songId={enriched.id}

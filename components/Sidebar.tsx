@@ -44,9 +44,17 @@ const nextKey = () => ++_k;
 interface Props {
   /** Initial playlist list rendered by the server (from the layout) */
   playlists: PlaylistWithCount[];
+  open?: boolean;
+  desktop?: boolean;
+  onClose?: () => void;
 }
 
-export default function Sidebar({ playlists: initialPlaylists }: Props) {
+export default function Sidebar({
+  playlists: initialPlaylists,
+  open = true,
+  desktop = false,
+  onClose,
+}: Props) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -203,7 +211,15 @@ export default function Sidebar({ playlists: initialPlaylists }: Props) {
   }
 
   return (
-    <aside className="w-72 border-r border-border flex flex-col shrink-0 h-full bg-background">
+    <aside
+      className={`inset-y-0 left-0 z-40 w-72 border-r border-border flex flex-col shrink-0 h-full bg-background transition-transform duration-200 ease-out ${
+        desktop
+          ? open
+            ? "relative z-auto translate-x-0"
+            : "hidden"
+          : `absolute ${open ? "translate-x-0" : "-translate-x-full"}`
+      }`}
+    >
       {/* URL input */}
       <div className="p-3 border-b border-border shrink-0">
         <div className="flex gap-2">
@@ -293,6 +309,7 @@ export default function Sidebar({ playlists: initialPlaylists }: Props) {
                           <Link
                             href={`/playlist/${run.playlistId}`}
                             className="text-[10px] text-primary hover:text-primary/80"
+                            onClick={onClose}
                           >
                             View →
                           </Link>
@@ -329,6 +346,7 @@ export default function Sidebar({ playlists: initialPlaylists }: Props) {
                         ? "bg-accent border-primary"
                         : "border-transparent"
                     }`}
+                    onClick={onClose}
                   >
                     <div className="flex items-center gap-1.5 min-w-0">
                       <Music2 className="h-3.5 w-3.5 text-primary/70 shrink-0" />
