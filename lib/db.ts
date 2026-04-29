@@ -1,4 +1,4 @@
-import Database from "better-sqlite3";
+import { Database } from "bun:sqlite";
 import path from "path";
 import fs from "fs";
 
@@ -9,19 +9,19 @@ if (!fs.existsSync(DATA_DIR)) {
 
 const DB_PATH = path.join(DATA_DIR, "ytdlpsync.db");
 
-let _db: Database.Database | null = null;
+let _db: Database | null = null;
 
-export function getDb(): Database.Database {
+export function getDb(): Database {
   if (!_db) {
-    _db = new Database(DB_PATH);
-    _db.pragma("journal_mode = WAL");
-    _db.pragma("foreign_keys = ON");
+    _db = new Database(DB_PATH, { create: true });
+    _db.exec("PRAGMA journal_mode = WAL;");
+    _db.exec("PRAGMA foreign_keys = ON;");
     initSchema(_db);
   }
   return _db;
 }
 
-function initSchema(db: Database.Database) {
+function initSchema(db: Database) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS playlists (
       id         TEXT PRIMARY KEY,
@@ -35,13 +35,15 @@ function initSchema(db: Database.Database) {
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
       playlist_id TEXT NOT NULL REFERENCES playlists(id) ON DELETE CASCADE,
       filename    TEXT NOT NULL,
+      bpm         INTEGER,
+      waveform    TEXT,
       added_at    INTEGER NOT NULL DEFAULT (strftime('%s','now')),
       UNIQUE(playlist_id, filename)
     );
   `);
 
   // migrate: add name column if missing (existing DBs)
-  const cols = db.pragma("table_info(playlists)") as { name: string }[];
+  const cols = db.query("PRAGMA table_info(playlists)").all() as { name: string }[];
   if (!cols.some((c) => c.name === "name")) {
     db.exec("ALTER TABLE playlists ADD COLUMN name TEXT");
   }
@@ -142,4 +144,9 @@ export function getSongFilenames(playlistId: string): Set<string> {
 
 export function deleteSong(id: number): void {
   getDb().prepare("DELETE FROM songs WHERE id = ?").run(id);
+}
+
+export function setAnalysis(songId: number, bpm: number, waveform: string) {
+  const db = getDb();
+  db.query("UPDATE songs SET bpm = ?, waveform = ? WHERE id = ?").run(bpm, waveform, songId);
 }

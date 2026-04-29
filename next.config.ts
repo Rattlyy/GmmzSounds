@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  serverExternalPackages: ["bun:sqlite", "music-tempo", "music-metadata"],
 };
 
 export default nextConfig;
