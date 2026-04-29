@@ -191,21 +191,21 @@ export default function Sidebar({ playlists: initialPlaylists }: Props) {
     switch (status) {
       case "running":
         return (
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500 shrink-0" />
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-primary shrink-0" />
         );
       case "done":
-        return <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />;
+        return <CheckCircle2 className="h-3.5 w-3.5 text-foreground shrink-0" />;
       case "error":
-        return <XCircle className="h-3.5 w-3.5 text-red-500 shrink-0" />;
+        return <XCircle className="h-3.5 w-3.5 text-destructive shrink-0" />;
       default:
         return null;
     }
   }
 
   return (
-    <aside className="w-72 border-r border-zinc-800 flex flex-col shrink-0 h-full">
+    <aside className="w-72 border-r border-border flex flex-col shrink-0 h-full bg-background">
       {/* URL input */}
-      <div className="p-3 border-b border-zinc-800 shrink-0">
+      <div className="p-3 border-b border-border shrink-0">
         <div className="flex gap-2">
           <Input
             value={url}
@@ -217,7 +217,7 @@ export default function Sidebar({ playlists: initialPlaylists }: Props) {
               if (e.key === "Enter") startDownload();
             }}
             placeholder="soundcloud.com/…"
-            className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 text-xs h-8"
+            className="bg-background border-input text-foreground placeholder:text-muted-foreground text-xs h-8"
           />
           {runningRun ? (
             <Button
@@ -233,14 +233,14 @@ export default function Sidebar({ playlists: initialPlaylists }: Props) {
               size="icon"
               disabled={!url.trim()}
               onClick={startDownload}
-              className="h-8 w-8 shrink-0 bg-orange-500 hover:bg-orange-600"
+              className="h-8 w-8 shrink-0"
             >
               <Download className="h-3.5 w-3.5" />
             </Button>
           )}
         </div>
         {urlError && (
-          <p className="text-red-400 text-[10px] mt-1 flex items-center gap-1">
+          <p className="text-destructive text-[10px] mt-1 flex items-center gap-1">
             <XCircle className="h-3 w-3" /> {urlError}
           </p>
         )}
@@ -251,13 +251,13 @@ export default function Sidebar({ playlists: initialPlaylists }: Props) {
         {runs.length > 0 && (
           <>
             <div className="px-3 pt-3 pb-1 flex items-center justify-between">
-              <span className="text-[10px] uppercase tracking-widest text-zinc-600 font-semibold">
+              <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">
                 Recent runs
               </span>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-5 w-5 text-zinc-600 hover:text-red-400"
+                className="h-5 w-5 text-muted-foreground hover:text-destructive"
                 onClick={() => setRuns([])}
               >
                 <Trash2 className="h-3 w-3" />
@@ -273,26 +273,26 @@ export default function Sidebar({ playlists: initialPlaylists }: Props) {
                     <div
                       className={`px-3 py-2 border-l-2 ${
                         isActive
-                          ? "bg-zinc-800 border-orange-400"
+                          ? "bg-accent border-primary"
                           : "border-transparent"
                       }`}
                     >
                       <div className="flex items-center gap-1.5">
                         {statusIcon(run.status)}
-                        <span className="text-xs text-zinc-300 truncate">
+                        <span className="text-xs text-foreground truncate">
                           {run.url.replace(/^https?:\/\//, "")}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 ml-5">
                         {run.newSongs.length > 0 && (
-                          <span className="text-[10px] text-green-400">
+                          <span className="text-[10px] text-primary">
                             +{run.newSongs.length} new
                           </span>
                         )}
                         {run.status === "done" && run.playlistId && (
                           <Link
                             href={`/playlist/${run.playlistId}`}
-                            className="text-[10px] text-orange-400 hover:text-orange-300"
+                            className="text-[10px] text-primary hover:text-primary/80"
                           >
                             View →
                           </Link>
@@ -303,18 +303,18 @@ export default function Sidebar({ playlists: initialPlaylists }: Props) {
                 );
               })}
             </ul>
-            <Separator className="mt-2 bg-zinc-800" />
+            <Separator className="mt-2 bg-border" />
           </>
         )}
 
         {/* Saved playlists */}
         <div className="px-3 pt-3 pb-1">
-          <span className="text-[10px] uppercase tracking-widest text-zinc-600 font-semibold flex items-center gap-1.5">
+          <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold flex items-center gap-1.5">
             <ListMusic className="h-3 w-3" /> Playlists
           </span>
         </div>
         {playlists.length === 0 ? (
-          <p className="text-zinc-700 text-xs px-3 pb-4">No playlists yet</p>
+          <p className="text-muted-foreground text-xs px-3 pb-4">No playlists yet</p>
         ) : (
           <ul className="pb-3">
             {playlists.map((pl) => {
@@ -324,15 +324,15 @@ export default function Sidebar({ playlists: initialPlaylists }: Props) {
                 <li key={pl.id}>
                   <Link
                     href={`/playlist/${pl.id}`}
-                    className={`block px-3 py-2.5 hover:bg-zinc-800 transition-colors border-l-2 ${
+                    className={`block px-3 py-2.5 hover:bg-accent transition-colors border-l-2 ${
                       isActive
-                        ? "bg-zinc-800 border-orange-400"
+                        ? "bg-accent border-primary"
                         : "border-transparent"
                     }`}
                   >
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <Music2 className="h-3.5 w-3.5 text-orange-400/70 shrink-0" />
-                      <span className="text-xs text-zinc-300 truncate flex-1">
+                      <Music2 className="h-3.5 w-3.5 text-primary/70 shrink-0" />
+                      <span className="text-xs text-foreground truncate flex-1">
                         {label}
                       </span>
                       {(pl.songCount ?? 0) > 0 && (
@@ -344,7 +344,7 @@ export default function Sidebar({ playlists: initialPlaylists }: Props) {
                         </Badge>
                       )}
                     </div>
-                    <p className="text-[10px] text-zinc-600 font-mono truncate ml-5">
+                    <p className="text-[10px] text-muted-foreground font-mono truncate ml-5">
                       {pl.url.replace(/^https?:\/\//, "")}
                     </p>
                   </Link>

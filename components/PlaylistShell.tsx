@@ -68,14 +68,14 @@ function fmtBytes(b: number | null): string {
 }
 
 function logClass(line: string): string {
-  if (line.includes("[error]") || line.includes("ERROR")) return "text-red-400";
-  if (line.includes("[download]")) return "text-blue-400";
+  if (line.includes("[error]") || line.includes("ERROR")) return "text-destructive";
+  if (line.includes("[download]")) return "text-primary";
   if (line.includes("[ExtractAudio]") || line.includes("[ffmpeg]"))
-    return "text-purple-400";
+    return "text-muted-foreground";
   if (line.includes("[Metadata]") || line.includes("[EmbedThumbnail]"))
-    return "text-yellow-400";
-  if (line.startsWith("[cancelled]")) return "text-orange-400";
-  return "text-zinc-300";
+    return "text-accent-foreground";
+  if (line.startsWith("[cancelled]")) return "text-muted-foreground";
+  return "text-foreground";
 }
 
 // ─── SongArtwork ─────────────────────────────────────────────────────────────
@@ -91,8 +91,8 @@ function SongArtwork({
 
   if (!song.exists) {
     return (
-      <span className="h-8 w-8 shrink-0 rounded bg-zinc-800/50 flex items-center justify-center">
-        <XCircle className="h-4 w-4 text-zinc-700" />
+      <span className="h-8 w-8 shrink-0 rounded bg-muted flex items-center justify-center">
+        <XCircle className="h-4 w-4 text-muted-foreground" />
       </span>
     );
   }
@@ -112,8 +112,8 @@ function SongArtwork({
   }
 
   return (
-    <span className="h-8 w-8 shrink-0 rounded bg-zinc-800 flex items-center justify-center">
-      <Music2 className="h-4 w-4 text-zinc-600" />
+    <span className="h-8 w-8 shrink-0 rounded bg-muted flex items-center justify-center">
+      <Music2 className="h-4 w-4 text-muted-foreground" />
     </span>
   );
 }
@@ -154,7 +154,7 @@ function SongWaveformLoader({
   }, [playlistId, songId, loading, displayWaveform]);
 
   if (loading) {
-    return <span className="h-6 w-full rounded bg-zinc-800 animate-pulse" />;
+    return <span className="h-6 w-full rounded bg-muted animate-pulse" />;
   }
 
   return <SongWaveform waveform={displayWaveform} />;
@@ -162,14 +162,14 @@ function SongWaveformLoader({
 
 function SongWaveform({ waveform }: { waveform: string | null }) {
   if (!waveform) {
-    return <span className="h-6 w-full rounded bg-zinc-900/70" />;
+    return <span className="h-6 w-full rounded bg-muted/70" />;
   }
 
   let bins: { low: number; mid: number; high: number }[];
   try {
     bins = JSON.parse(waveform) as { low: number; mid: number; high: number }[];
   } catch {
-    return <span className="h-6 w-full rounded bg-zinc-900/70" />;
+    return <span className="h-6 w-full rounded bg-muted/70" />;
   }
 
   const width = Math.min(Math.max(bins.length, 40), 120);
@@ -181,25 +181,28 @@ function SongWaveform({ waveform }: { waveform: string | null }) {
       preserveAspectRatio="none"
       aria-hidden
       className="h-6 w-full overflow-visible"
+      style={{ display: "block" }}
     >
       {slice.map((bin, i) => {
         const totalH = Math.max(bin.low, bin.mid, bin.high);
         if (totalH < 0.005) return null;
 
-        const lowH = bin.low * 0.6;
-        const midH = bin.mid * 0.8;
-        const highH = bin.high;
+        const lowH = Math.max(bin.low * 0.6, 0.02); // Ensure minimum visibility
+        const midH = Math.max(bin.mid * 0.8, 0.02);
+        const highH = Math.max(bin.high, 0.02);
         const gap = slice.length > 80 ? 0.15 : 0.2;
         const bw = 1 - gap;
         const x = i + gap / 2;
 
         return (
           <g key={i}>
+            {/* Upper half */}
             <rect x={x} y={-lowH} width={bw} height={lowH} fill="#0055e2" opacity="1" />
-            <rect x={x} y={-midH} width={bw} height={midH} fill="#f2aa3c" opacity="1" style={{ mixBlendMode: "color" }} />
+            <rect x={x} y={-midH} width={bw} height={midH} fill="#f2aa3c" opacity="1" />
             <rect x={x} y={-highH} width={bw} height={highH} fill="#ffffff" opacity="1" />
+            {/* Lower half (mirror) */}
             <rect x={x} y={0} width={bw} height={lowH} fill="#0055e2" opacity="0.6" />
-            <rect x={x} y={0} width={bw} height={midH} fill="#f2aa3c" opacity="0.6" style={{ mixBlendMode: "color" }} />
+            <rect x={x} y={0} width={bw} height={midH} fill="#f2aa3c" opacity="0.6" />
             <rect x={x} y={0} width={bw} height={highH} fill="#ffffff" opacity="0.6" />
           </g>
         );
@@ -254,6 +257,9 @@ export default function PlaylistShell({
 
   // delete confirm
   const [deleteOpen, setDeleteOpen] = useState(false);
+
+  // reset waveforms
+  const [resettingWaveforms, setResettingWaveforms] = useState(false);
 
   // active tab
   const [tab, setTab] = useState<"songs" | "logs">("songs");
@@ -425,6 +431,24 @@ export default function PlaylistShell({
     }
   }
 
+  // ── reset waveforms ───────────────────────────────────────────────────────
+
+  async function resetWaveforms() {
+    setResettingWaveforms(true);
+    try {
+      const res = await fetch(`/api/playlists/${playlist.id}/waveforms/reset`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        await reloadSongs();
+      }
+    } catch (err) {
+      console.error("Failed to reset waveforms:", err);
+    } finally {
+      setResettingWaveforms(false);
+    }
+  }
+
   // ── song actions ───────────────────────────────────────────────────────────
 
   function downloadSong(song: EnrichedSong) {
@@ -445,10 +469,10 @@ export default function PlaylistShell({
   return (
     <div className="flex flex-col h-full gap-0">
       {/* ── Header ── */}
-      <div className="px-6 pt-5 pb-4 border-b border-zinc-800 shrink-0">
+      <div className="px-6 pt-5 pb-4 border-b border-border shrink-0">
         {/* Name row */}
         <div className="flex items-center gap-2 mb-2">
-          <Music2 className="h-5 w-5 text-orange-400 shrink-0" />
+          <Music2 className="h-5 w-5 text-primary shrink-0" />
           {editingName ? (
             <div className="flex items-center gap-2 flex-1">
               <Input
@@ -465,12 +489,12 @@ export default function PlaylistShell({
                   }
                 }}
                 placeholder="Playlist name…"
-                className="h-8 text-sm bg-zinc-900 border-zinc-700"
+                className="h-8 text-sm bg-background border-input"
               />
               <Button
                 size="icon"
                 variant="ghost"
-                className="h-7 w-7 text-green-400"
+                className="h-7 w-7 text-foreground"
                 onClick={saveName}
               >
                 <Check className="h-4 w-4" />
@@ -478,7 +502,7 @@ export default function PlaylistShell({
               <Button
                 size="icon"
                 variant="ghost"
-                className="h-7 w-7 text-zinc-500"
+                className="h-7 w-7 text-muted-foreground"
                 onClick={() => {
                   setEditingName(false);
                   setNameVal(playlist.name ?? "");
@@ -497,7 +521,7 @@ export default function PlaylistShell({
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="h-6 w-6 text-zinc-500 hover:text-zinc-300 shrink-0"
+                    className="h-6 w-6 text-muted-foreground hover:text-foreground shrink-0"
                     onClick={() => setEditingName(true)}
                   >
                     <Pencil className="h-3 w-3" />
@@ -514,7 +538,7 @@ export default function PlaylistShell({
               <Button
                 size="icon"
                 variant="ghost"
-                className="h-7 w-7 text-zinc-600 hover:text-red-400 shrink-0"
+                className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
                 onClick={() => setDeleteOpen(true)}
               >
                 <Trash2 className="h-4 w-4" />
@@ -527,7 +551,7 @@ export default function PlaylistShell({
         {/* URL row */}
         {editingUrl ? (
           <div className="flex items-center gap-2 mb-3">
-            <Link2 className="h-3.5 w-3.5 text-zinc-500 shrink-0" />
+            <Link2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
             <div className="flex-1">
               <Input
                 autoFocus
@@ -544,16 +568,16 @@ export default function PlaylistShell({
                     setUrlErr(null);
                   }
                 }}
-                className="h-7 text-xs font-mono bg-zinc-900 border-zinc-700"
+                className="h-7 text-xs font-mono bg-background border-input"
               />
               {urlErr && (
-                <p className="text-red-400 text-xs mt-0.5">{urlErr}</p>
+                <p className="text-destructive text-xs mt-0.5">{urlErr}</p>
               )}
             </div>
             <Button
               size="icon"
               variant="ghost"
-              className="h-7 w-7 text-green-400 shrink-0"
+              className="h-7 w-7 text-foreground shrink-0"
               onClick={saveUrl}
             >
               <Check className="h-3.5 w-3.5" />
@@ -561,7 +585,7 @@ export default function PlaylistShell({
             <Button
               size="icon"
               variant="ghost"
-              className="h-7 w-7 text-zinc-500 shrink-0"
+              className="h-7 w-7 text-muted-foreground shrink-0"
               onClick={() => {
                 setEditingUrl(false);
                 setUrlVal(playlist.url);
@@ -573,14 +597,14 @@ export default function PlaylistShell({
           </div>
         ) : (
           <div className="flex items-center gap-1.5 mb-3 group">
-            <Link2 className="h-3 w-3 text-zinc-600 shrink-0" />
-            <span className="text-xs font-mono text-zinc-500 truncate flex-1">
+            <Link2 className="h-3 w-3 text-muted-foreground shrink-0" />
+            <span className="text-xs font-mono text-muted-foreground truncate flex-1">
               {playlist.url}
             </span>
             <Button
               size="icon"
               variant="ghost"
-              className="h-5 w-5 text-zinc-600 hover:text-zinc-300 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+              className="h-5 w-5 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
               onClick={() => setEditingUrl(true)}
             >
               <Pencil className="h-3 w-3" />
@@ -601,11 +625,7 @@ export default function PlaylistShell({
               <XCircle className="h-3.5 w-3.5 mr-1.5" /> Cancel
             </Button>
           ) : (
-            <Button
-              size="sm"
-              onClick={startRefresh}
-              className="h-8 bg-orange-500 hover:bg-orange-600 text-white"
-            >
+            <Button size="sm" onClick={startRefresh} className="h-8">
               <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
               Refresh
             </Button>
@@ -616,9 +636,20 @@ export default function PlaylistShell({
             size="sm"
             variant="outline"
             onClick={() => downloadZip(false)}
-            className="h-8 border-zinc-700 hover:bg-zinc-800"
+            className="h-8"
           >
             <Package className="h-3.5 w-3.5 mr-1.5" /> Download ZIP
+          </Button>
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={resetWaveforms}
+            disabled={resettingWaveforms}
+            className="h-8"
+          >
+            <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+            {resettingWaveforms ? "Resetting…" : "Reset Waveforms"}
           </Button>
 
           {/* Download new-only ZIP */}
@@ -627,7 +658,7 @@ export default function PlaylistShell({
               size="sm"
               variant="outline"
               onClick={() => downloadZip(true)}
-              className="h-8 border-green-800 text-green-400 hover:bg-zinc-800"
+              className="h-8"
             >
               <Sparkles className="h-3.5 w-3.5 mr-1.5" /> New songs ZIP
               <Badge className="ml-1.5 h-4 px-1 text-[10px]">
@@ -638,12 +669,12 @@ export default function PlaylistShell({
 
           {/* Status badge */}
           {refreshStatus === "running" && (
-            <span className="flex items-center gap-1 text-xs text-blue-400">
+            <span className="flex items-center gap-1 text-xs text-primary">
               <Loader2 className="h-3 w-3 animate-spin" /> Syncing…
             </span>
           )}
           {refreshStatus === "done" && (
-            <span className="flex items-center gap-1 text-xs text-green-400">
+            <span className="flex items-center gap-1 text-xs text-foreground">
               <CheckCircle2 className="h-3 w-3" />
               {newSongs.length > 0
                 ? `${newSongs.length} new song${newSongs.length !== 1 ? "s" : ""}`
@@ -651,7 +682,7 @@ export default function PlaylistShell({
             </span>
           )}
           {refreshStatus === "error" && (
-            <span className="flex items-center gap-1 text-xs text-red-400">
+            <span className="flex items-center gap-1 text-xs text-destructive">
               <XCircle className="h-3 w-3" /> Error
             </span>
           )}
@@ -664,7 +695,7 @@ export default function PlaylistShell({
         onValueChange={(v: string) => setTab(v as "songs" | "logs")}
         className="flex flex-col flex-1 min-h-0"
       >
-        <TabsList className="mx-6 mt-3 mb-0 self-start bg-zinc-900 border border-zinc-800">
+        <TabsList className="mx-6 mt-3 mb-0 self-start bg-muted border border-border">
           <TabsTrigger value="songs" className="text-xs gap-1.5">
             <FileAudio className="h-3.5 w-3.5" />
             Songs
@@ -681,7 +712,7 @@ export default function PlaylistShell({
               refreshStatus === "done" ||
               refreshStatus === "error") &&
               logs.length > 0 && (
-                <span className="ml-1 h-1.5 w-1.5 rounded-full bg-orange-400 inline-block" />
+                <span className="ml-1 h-1.5 w-1.5 rounded-full bg-primary inline-block" />
               )}
           </TabsTrigger>
         </TabsList>
@@ -689,19 +720,19 @@ export default function PlaylistShell({
         {/* Songs tab */}
         <TabsContent value="songs" className="flex-1 min-h-0 mt-0 mx-0">
           {songsLoading ? (
-            <div className="flex items-center justify-center h-40 text-zinc-600 text-sm gap-2">
+            <div className="flex items-center justify-center h-40 text-muted-foreground text-sm gap-2">
               <Loader2 className="h-4 w-4 animate-spin" /> Loading…
             </div>
           ) : songs.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-40 text-zinc-600 gap-2">
+            <div className="flex flex-col items-center justify-center h-40 text-muted-foreground gap-2">
               <Music2 className="h-8 w-8 opacity-30" />
               <p className="text-sm">No songs downloaded yet</p>
             </div>
           ) : (
             <ScrollArea className="h-full">
               <table className="w-full text-xs">
-                <thead className="sticky top-0 bg-zinc-950 z-10">
-                  <tr className="border-b border-zinc-800 text-zinc-500">
+                <thead className="sticky top-0 bg-background z-10">
+                  <tr className="border-b border-border text-muted-foreground">
                     <th className="text-left px-6 py-2 font-medium w-8">#</th>
                     <th className="text-left px-2 py-2 font-medium">
                       Title / File
@@ -726,18 +757,18 @@ export default function PlaylistShell({
                     return (
                       <tr
                         key={song.id}
-                        className={`border-b border-zinc-800/50 transition-colors group/row ${
+                        className={`border-b border-border/50 transition-colors group/row ${
                           isErrored
-                            ? "bg-red-950/40 hover:bg-red-950/60"
+                            ? "bg-destructive/10 hover:bg-destructive/15"
                             : !song.exists
-                              ? "opacity-40 hover:bg-zinc-900/60"
-                              : "hover:bg-zinc-900/60"
+                              ? "opacity-40 hover:bg-accent/60"
+                              : "hover:bg-accent/60"
                         }`}
                       >
-                        <td className="px-6 py-1.5 text-zinc-600 tabular-nums">
+                        <td className="px-6 py-1.5 text-muted-foreground tabular-nums">
                           {i + 1}
                         </td>
-                        <td className="px-2 py-1.5 max-w-0">
+                        <td className="px-2 py-1.5 w-48 shrink-0">
                           <div className="flex items-center gap-2 min-w-0">
                             {/* Artwork + title */}
                             <div className="relative shrink-0">
@@ -747,41 +778,41 @@ export default function PlaylistShell({
                               />
                               {isErrored && (
                                 <span className="absolute -top-1 -right-1">
-                                  <AlertTriangle className="h-3.5 w-3.5 text-orange-400" />
+                                  <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
                                 </span>
                               )}
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-1.5">
                                 {song.title ? (
-                                  <p className="truncate font-medium text-zinc-200">
+                                  <p className="truncate font-medium text-foreground">
                                     {song.title}
                                   </p>
                                 ) : (
-                                  <p className="truncate text-zinc-400 font-mono">
+                                  <p className="truncate text-muted-foreground font-mono">
                                     {song.filename}
                                   </p>
                                 )}
                                 {isErrored && (
-                                  <Badge className="shrink-0 h-4 px-1 text-[10px] bg-red-900/60 text-red-400 border-red-800">
+                                  <Badge className="shrink-0 h-4 px-1 text-[10px] bg-destructive/10 text-destructive border-destructive">
                                     &lt; 30s
                                   </Badge>
                                 )}
                               </div>
                               {song.title && (
-                                <p className="truncate text-zinc-600 font-mono text-[10px]">
+                                <p className="truncate text-muted-foreground font-mono text-[10px]">
                                   {song.filename}
                                 </p>
                               )}
                             </div>
                           </div>
                         </td>
-                        <td className="px-2 py-1.5 text-zinc-400 truncate max-w-[140px] hidden md:table-cell">
+                        <td className="px-2 py-1.5 text-muted-foreground truncate max-w-[140px] hidden md:table-cell">
                           {song.artist ?? (
-                            <span className="text-zinc-700">—</span>
+                            <span className="text-muted-foreground">—</span>
                           )}
                         </td>
-                        <td className="px-2 py-1.5 hidden lg:table-cell">
+                        <td className="px-2 py-1.5 hidden lg:table-cell w-full">
                           <div className="flex items-center justify-center h-6 w-full">
                             <SongWaveformLoader
                               playlistId={playlist.id}
@@ -790,10 +821,10 @@ export default function PlaylistShell({
                             />
                           </div>
                         </td>
-                        <td className="px-2 py-1.5 text-right text-zinc-500 tabular-nums hidden lg:table-cell">
+                        <td className="px-2 py-1.5 text-right text-muted-foreground tabular-nums hidden lg:table-cell">
                           {fmtDuration(song.duration)}
                         </td>
-                        <td className="px-4 py-1.5 text-right text-zinc-600 tabular-nums hidden lg:table-cell">
+                        <td className="px-4 py-1.5 text-right text-muted-foreground tabular-nums hidden lg:table-cell">
                           {fmtBytes(song.size)}
                         </td>
                         <td className="px-2 py-1.5">
@@ -803,7 +834,7 @@ export default function PlaylistShell({
                                 <Button
                                   size="icon"
                                   variant="ghost"
-                                  className="h-6 w-6 text-zinc-500 hover:text-zinc-200"
+                                  className="h-6 w-6 text-muted-foreground hover:text-foreground"
                                   onClick={() => downloadSong(song)}
                                   disabled={!song.exists}
                                 >
@@ -817,7 +848,7 @@ export default function PlaylistShell({
                                 <Button
                                   size="icon"
                                   variant="ghost"
-                                  className="h-6 w-6 text-zinc-500 hover:text-red-400"
+                                  className="h-6 w-6 text-muted-foreground hover:text-destructive"
                                   onClick={() => deleteSong(song)}
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
@@ -841,7 +872,7 @@ export default function PlaylistShell({
           <ScrollArea className="h-full">
             <div className="px-6 py-4 font-mono text-xs space-y-0.5">
               {logs.length === 0 ? (
-                <span className="text-zinc-600">
+                <span className="text-muted-foreground">
                   No refresh run yet. Hit Refresh to sync.
                 </span>
               ) : (
@@ -856,17 +887,17 @@ export default function PlaylistShell({
                   ))}
                   {newSongs.length > 0 && (
                     <>
-                      <Separator className="my-2 bg-zinc-800" />
-                      <p className="text-green-400 font-sans font-medium text-[11px] pb-1 flex items-center gap-1">
+                      <Separator className="my-2 bg-border" />
+                      <p className="text-foreground font-sans font-medium text-[11px] pb-1 flex items-center gap-1">
                         <Sparkles className="h-3 w-3" /> {newSongs.length} new
                         song{newSongs.length !== 1 ? "s" : ""} downloaded
                       </p>
                       {newSongs.map((s, idx) => (
                         <div
                           key={idx}
-                          className="flex items-center gap-1.5 text-zinc-300 leading-5"
+                          className="flex items-center gap-1.5 text-foreground leading-5"
                         >
-                          <CheckCircle2 className="h-3 w-3 text-green-500 shrink-0" />
+                          <CheckCircle2 className="h-3 w-3 text-primary shrink-0" />
                           {s}
                         </div>
                       ))}
@@ -882,13 +913,13 @@ export default function PlaylistShell({
 
       {/* ── Delete confirm dialog ── */}
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <DialogContent className="bg-zinc-900 border-zinc-800 text-zinc-50 max-w-sm">
+        <DialogContent className="bg-background border-border text-foreground max-w-sm">
           <DialogHeader>
             <DialogTitle>Delete playlist?</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-zinc-400">
+          <p className="text-sm text-muted-foreground">
             This removes{" "}
-            <span className="font-semibold text-zinc-200">{displayName}</span>{" "}
+            <span className="font-semibold text-foreground">{displayName}</span>{" "}
             from the database. Downloaded files on disk are{" "}
             <span className="font-semibold">not</span> deleted.
           </p>

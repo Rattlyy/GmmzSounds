@@ -39,8 +39,8 @@ export function SongsToolbar({ q, sort, dir }: Props) {
   const btnClasses = (field: SortField) =>
     `flex items-center gap-1 px-3 py-1.5 rounded text-xs font-medium cursor-pointer transition-colors ${
       sort === field
-        ? "bg-zinc-800 text-zinc-200 shadow-sm"
-        : "text-zinc-500 hover:bg-zinc-800/50 hover:text-zinc-300"
+        ? "bg-accent text-accent-foreground shadow-sm"
+        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
     }`;
 
   const renderIcon = (field: SortField) => {
@@ -54,12 +54,12 @@ export function SongsToolbar({ q, sort, dir }: Props) {
   };
 
   return (
-    <div className="flex flex-col sm:flex-row gap-2 border-b border-zinc-800 p-4 shrink-0 bg-zinc-950 items-center justify-between sticky top-0 z-20">
+    <div className="flex flex-col sm:flex-row gap-2 border-b border-border p-4 shrink-0 bg-background items-center justify-between sticky top-0 z-20">
       <div className="relative w-full max-w-sm">
-        <Search className="absolute left-2.5 top-2 h-4 w-4 text-zinc-500" />
+        <Search className="absolute left-2.5 top-2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Filter songs..."
-          className="pl-9 h-8 bg-zinc-900 border-zinc-800 text-sm focus-visible:ring-zinc-700"
+          className="pl-9 h-8 bg-background border-input text-sm focus-visible:ring-ring"
           value={q}
           onChange={handleSearch}
         />

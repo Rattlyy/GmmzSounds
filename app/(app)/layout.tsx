@@ -14,12 +14,12 @@ export default async function AppLayout({
   }));
 
   return (
-    <div className="h-full flex flex-col bg-zinc-950 text-zinc-50">
+    <div className="h-full flex flex-col bg-background text-foreground">
       {/* Header */}
-      <header className="border-b border-zinc-800 px-6 py-4 flex items-center gap-3 shrink-0">
-        <Music2 className="h-6 w-6 text-orange-400" />
+      <header className="border-b border-border px-6 py-4 flex items-center gap-3 shrink-0">
+        <Music2 className="h-6 w-6 text-primary" />
         <h1 className="text-xl font-bold tracking-tight">YTDLPSync</h1>
-        <span className="text-zinc-500 text-sm ml-1">SoundCloud downloader</span>
+        <span className="text-muted-foreground text-sm ml-1">SoundCloud downloader</span>
       </header>
 
       {/* Body */}

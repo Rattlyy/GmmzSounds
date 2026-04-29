@@ -10,7 +10,7 @@ interface Props {
 
 export function SongActions({ playlistId, songId, exists }: Props) {
   if (!exists) {
-    return <span className="text-zinc-600 italic text-[10px]">Missing</span>;
+    return <span className="text-muted-foreground italic text-[10px]">Missing</span>;
   }
 
   return (
@@ -18,13 +18,13 @@ export function SongActions({ playlistId, songId, exists }: Props) {
       <a
         href={`/api/playlists/${playlistId}/songs/${songId}`}
         download
-        className="p-1 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white"
+        className="p-1 hover:bg-accent rounded text-muted-foreground hover:text-accent-foreground"
         title="Download Track"
       >
         <Download className="w-3.5 h-3.5" />
       </a>
       {/* Play logic can go here in the future if we build an in-browser player */}
-      <button className="p-1 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white cursor-pointer" title="Play">
+      <button className="p-1 hover:bg-accent rounded text-muted-foreground hover:text-accent-foreground cursor-pointer" title="Play">
         <Play className="w-3.5 h-3.5" />
       </button>
     </div>

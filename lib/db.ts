@@ -148,7 +148,12 @@ export function deleteSong(id: number): void {
   getDb().prepare("DELETE FROM songs WHERE id = ?").run(id);
 }
 
-export function setAnalysis(songId: number, bpm: number, waveform: string) {
+export function setAnalysis(songId: number, bpm: number | null, waveform: string | null): void {
   const db = getDb();
   db.prepare("UPDATE songs SET bpm = ?, waveform = ? WHERE id = ?").run(bpm, waveform, songId);
+}
+
+export function resetWaveformsForPlaylist(playlistId: string): void {
+  const db = getDb();
+  db.prepare("UPDATE songs SET bpm = NULL, waveform = NULL WHERE playlist_id = ?").run(playlistId);
 }

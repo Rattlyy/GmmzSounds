@@ -11,7 +11,7 @@ interface Props {
 export function ArtworkCell({ playlistId, songId, hasArtwork, exists }: Props) {
   if (!exists) {
     return (
-      <div className="w-8 h-8 rounded bg-zinc-900 flex items-center justify-center text-zinc-600 shrink-0">
+      <div className="w-8 h-8 rounded bg-muted flex items-center justify-center text-muted-foreground shrink-0">
         <ImageIcon className="w-4 h-4" />
       </div>
     );
@@ -19,7 +19,7 @@ export function ArtworkCell({ playlistId, songId, hasArtwork, exists }: Props) {
 
   if (hasArtwork) {
     return (
-      <div className="w-8 h-8 rounded shrink-0 relative overflow-hidden bg-zinc-900">
+      <div className="w-8 h-8 rounded shrink-0 relative overflow-hidden bg-muted">
         <Image
           src={`/api/playlists/${playlistId}/songs/${songId}/artwork`}
           alt="Artwork"
@@ -32,7 +32,7 @@ export function ArtworkCell({ playlistId, songId, hasArtwork, exists }: Props) {
   }
 
   return (
-    <div className="w-8 h-8 rounded bg-zinc-900 flex items-center justify-center text-zinc-700 shrink-0">
+    <div className="w-8 h-8 rounded bg-muted flex items-center justify-center text-muted-foreground shrink-0">
       <ImageIcon className="w-4 h-4" />
     </div>
   );
