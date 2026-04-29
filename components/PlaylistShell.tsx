@@ -118,6 +118,97 @@ function SongArtwork({
   );
 }
 
+function SongWaveformLoader({
+  playlistId,
+  songId,
+  waveform,
+}: {
+  playlistId: string;
+  songId: number;
+  waveform: string | null;
+}) {
+  const [loading, setLoading] = React.useState(!waveform);
+  const [displayWaveform, setDisplayWaveform] = React.useState(waveform);
+
+  React.useEffect(() => {
+    if (displayWaveform || !loading) return;
+
+    const generate = async () => {
+      try {
+        const res = await fetch(
+          `/api/playlists/${playlistId}/songs/${songId}/analyze`,
+          { method: "POST" }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setDisplayWaveform(JSON.stringify(data.waveform));
+        }
+      } catch (err) {
+        console.error("Waveform generation error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    generate();
+  }, [playlistId, songId, loading, displayWaveform]);
+
+  if (loading) {
+    return <span className="h-6 w-full rounded bg-zinc-800 animate-pulse" />;
+  }
+
+  return <SongWaveform waveform={displayWaveform} />;
+}
+
+function SongWaveform({ waveform }: { waveform: string | null }) {
+  if (!waveform) {
+    return <span className="h-6 w-full rounded bg-zinc-900/70" />;
+  }
+
+  let bins: { low: number; mid: number; high: number }[];
+  try {
+    bins = JSON.parse(waveform) as { low: number; mid: number; high: number }[];
+  } catch {
+    return <span className="h-6 w-full rounded bg-zinc-900/70" />;
+  }
+
+  const width = Math.min(Math.max(bins.length, 40), 120);
+  const slice = bins.slice(0, width);
+
+  return (
+    <svg
+      viewBox={`0 -1 ${slice.length} 2`}
+      preserveAspectRatio="none"
+      aria-hidden
+      className="h-6 w-full overflow-visible"
+    >
+      {slice.map((bin, i) => {
+        const totalH = Math.max(bin.low, bin.mid, bin.high);
+        if (totalH < 0.005) return null;
+
+        const lowH = bin.low * 0.6;
+        const midH = bin.mid * 0.8;
+        const highH = bin.high;
+        const gap = slice.length > 80 ? 0.15 : 0.2;
+        const bw = 1 - gap;
+        const x = i + gap / 2;
+
+        return (
+          <g key={i}>
+            <rect x={x} y={-lowH} width={bw} height={lowH} fill="#0055e2" opacity="1" />
+            <rect x={x} y={-midH} width={bw} height={midH} fill="#f2aa3c" opacity="1" style={{ mixBlendMode: "color" }} />
+            <rect x={x} y={-highH} width={bw} height={highH} fill="#ffffff" opacity="1" />
+            <rect x={x} y={0} width={bw} height={lowH} fill="#0055e2" opacity="0.6" />
+            <rect x={x} y={0} width={bw} height={midH} fill="#f2aa3c" opacity="0.6" style={{ mixBlendMode: "color" }} />
+            <rect x={x} y={0} width={bw} height={highH} fill="#ffffff" opacity="0.6" />
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -618,6 +709,7 @@ export default function PlaylistShell({
                     <th className="text-left px-2 py-2 font-medium hidden md:table-cell">
                       Artist
                     </th>
+                    <th className="px-2 py-2 hidden lg:table-cell" />
                     <th className="text-right px-2 py-2 font-medium hidden lg:table-cell">
                       <Clock className="h-3 w-3 inline mr-0.5" />
                     </th>
@@ -646,8 +738,8 @@ export default function PlaylistShell({
                           {i + 1}
                         </td>
                         <td className="px-2 py-1.5 max-w-0">
-                          <div className="flex items-center gap-2">
-                            {/* Artwork + optional error triangle */}
+                          <div className="flex items-center gap-2 min-w-0">
+                            {/* Artwork + title */}
                             <div className="relative shrink-0">
                               <SongArtwork
                                 playlistId={playlist.id}
@@ -659,7 +751,7 @@ export default function PlaylistShell({
                                 </span>
                               )}
                             </div>
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-1.5">
                                 {song.title ? (
                                   <p className="truncate font-medium text-zinc-200">
@@ -688,6 +780,15 @@ export default function PlaylistShell({
                           {song.artist ?? (
                             <span className="text-zinc-700">—</span>
                           )}
+                        </td>
+                        <td className="px-2 py-1.5 hidden lg:table-cell">
+                          <div className="flex items-center justify-center h-6 w-full">
+                            <SongWaveformLoader
+                              playlistId={playlist.id}
+                              songId={song.id}
+                              waveform={song.waveform}
+                            />
+                          </div>
                         </td>
                         <td className="px-2 py-1.5 text-right text-zinc-500 tabular-nums hidden lg:table-cell">
                           {fmtDuration(song.duration)}

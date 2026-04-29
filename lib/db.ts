@@ -61,6 +61,8 @@ export interface Song {
   id: number;
   playlist_id: string;
   filename: string;
+  bpm: number | null;
+  waveform: string | null;
   added_at: number;
 }
 
@@ -148,5 +150,5 @@ export function deleteSong(id: number): void {
 
 export function setAnalysis(songId: number, bpm: number, waveform: string) {
   const db = getDb();
-  db.query("UPDATE songs SET bpm = ?, waveform = ? WHERE id = ?").run(bpm, waveform, songId);
+  db.prepare("UPDATE songs SET bpm = ?, waveform = ? WHERE id = ?").run(bpm, waveform, songId);
 }

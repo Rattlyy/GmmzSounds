@@ -93,8 +93,8 @@ async function enrichSong(song: Song, folder: string): Promise<EnrichedSong> {
     album,
     duration,
     hasArtwork,
-    bpm: null,
-    waveform: null,
+    bpm: song.bpm ?? null,
+    waveform: song.waveform ?? null,
   };
 }
 
