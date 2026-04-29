@@ -2,8 +2,6 @@ FROM oven/bun:1-alpine AS base
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN apk add --no-cache ffmpeg aria2
-
 FROM base AS deps
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
@@ -18,6 +16,8 @@ ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
+
+RUN apk add --no-cache ffmpeg aria2
 COPY --from=kinkard/yt-dlp-alpine:latest /usr/local/bin/yt-dlp /usr/local/bin/yt-dlp
 COPY --from=builder /app /app
 
