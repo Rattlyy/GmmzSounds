@@ -25,7 +25,7 @@ import type { Playlist } from "@/lib/db";
 type PlaylistWithCount = Playlist & { songCount?: number };
 
 type LogLine = { text: string; key: number };
-type Status = "idle" | "running" | "done" | "error";
+type Status = "idle" | "registered" | "running" | "done" | "error";
 
 interface DownloadRun {
   id: string;
@@ -71,6 +71,61 @@ export default function Sidebar({
     setPlaylists(initialPlaylists);
   }, [initialPlaylists]);
 
+  // Listen for playlist refresh events to update run statuses/logs
+  useEffect(() => {
+    function onStart(e: Event) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const detail = (e as CustomEvent<any>).detail;
+      const { playlistId } = detail || {};
+      if (!playlistId) return;
+      setRuns((prev) =>
+        prev.map((r) =>
+          r.playlistId === playlistId && r.status === "registered"
+            ? { ...r, status: "running" }
+            : r,
+        ),
+      );
+    }
+
+    function onLog(e: Event) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const detail = (e as CustomEvent<any>).detail;
+      const { playlistId, line } = detail || {};
+      if (!playlistId || !line) return;
+      setRuns((prev) =>
+        prev.map((r) =>
+          r.playlistId === playlistId
+            ? { ...r, logs: [...r.logs, { text: line, key: nextKey() }] }
+            : r,
+        ),
+      );
+    }
+
+    function onDone(e: Event) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const detail = (e as CustomEvent<any>).detail;
+      const { playlistId, code, newSongs } = detail || {};
+      if (!playlistId) return;
+      setRuns((prev) =>
+        prev.map((r) =>
+          r.playlistId === playlistId
+            ? { ...r, status: code === 0 ? "done" : "error", newSongs: newSongs ?? r.newSongs }
+            : r,
+        ),
+      );
+    }
+
+    window.addEventListener("playlist-refresh-start", onStart);
+    window.addEventListener("playlist-refresh-log", onLog);
+    window.addEventListener("playlist-refresh-done", onDone);
+
+    return () => {
+      window.removeEventListener("playlist-refresh-start", onStart);
+      window.removeEventListener("playlist-refresh-log", onLog);
+      window.removeEventListener("playlist-refresh-done", onDone);
+    };
+  }, []);
+
   // ── validation ──────────────────────────────────────────────────────────
 
   function validateUrl(raw: string): boolean {
@@ -105,29 +160,24 @@ export default function Sidebar({
       return;
     }
     setUrlError(null);
-
     const runId = `run-${Date.now()}`;
     setRuns((prev) => [
       {
         id: runId,
         url: trimmed,
         playlistId: null,
-        status: "running",
+        status: "registered",
         logs: [],
         newSongs: [],
       },
       ...prev,
     ]);
 
-    const abort = new AbortController();
-    abortRef.current = abort;
-
     try {
-      const res = await fetch("/api/download", {
+      const res = await fetch("/api/playlists/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: trimmed }),
-        signal: abort.signal,
       });
 
       if (!res.ok) {
@@ -137,53 +187,20 @@ export default function Sidebar({
         return;
       }
 
-      const reader = res.body!.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
+      const data = await res.json().catch(() => null);
+      const playlistId = data?.playlistId ?? null;
+      updateRun(runId, { playlistId });
 
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const parts = buffer.split("\n\n");
-        buffer = parts.pop() ?? "";
-        for (const part of parts) {
-          const line = part.startsWith("data: ") ? part.slice(6) : part;
-          if (!line.trim()) continue;
-          try {
-            const msg = JSON.parse(line);
-            if (msg.type === "meta") {
-              updateRun(runId, { playlistId: msg.playlistId });
-            } else if (msg.type === "log") {
-              appendLog(runId, msg.line);
-            } else if (msg.type === "done") {
-              updateRun(runId, {
-                status: msg.code === 0 ? "done" : "error",
-                newSongs: msg.newSongs ?? [],
-                playlistId: msg.playlistId ?? null,
-              });
-              // Re-fetch playlist list so new playlist appears
-              const fresh = await fetch("/api/playlists").then((r) => r.json());
-              setPlaylists(fresh);
-              // Navigate to the newly created playlist
-              if (msg.playlistId) {
-                router.push(`/playlist/${msg.playlistId}`);
-              }
-            }
-          } catch {
-            appendLog(runId, line);
-          }
-        }
-      }
+      // Refresh sidebar playlists so the registered playlist appears
+      const fresh = await fetch("/api/playlists").then((r) => r.json());
+      setPlaylists(fresh);
+
+      // Navigate to playlist page so user can click Refresh to start downloads
+      if (playlistId) router.push(`/playlist/${playlistId}`);
     } catch (err: unknown) {
-      if (err instanceof Error && err.name === "AbortError") {
-        appendLog(runId, "[cancelled]");
-        updateRun(runId, { status: "error" });
-      } else {
-        const msg = err instanceof Error ? err.message : "Unknown error";
-        appendLog(runId, `[error] ${msg}`);
-        updateRun(runId, { status: "error" });
-      }
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      appendLog(runId, `[error] ${msg}`);
+      updateRun(runId, { status: "error" });
     }
   }, [url, router]);
 

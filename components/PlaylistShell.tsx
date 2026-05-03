@@ -382,12 +382,33 @@ export default function PlaylistShell({
             const msg = JSON.parse(line);
             if (msg.type === "meta") {
               setRefreshStartAt(msg.refreshStartAt ?? null);
+              try {
+                window.dispatchEvent(
+                  new CustomEvent("playlist-refresh-start", {
+                    detail: { playlistId: msg.playlistId, refreshStartAt: msg.refreshStartAt },
+                  }),
+                );
+              } catch {}
             } else if (msg.type === "log") {
               appendLog(msg.line);
+              try {
+                window.dispatchEvent(
+                  new CustomEvent("playlist-refresh-log", {
+                    detail: { playlistId: msg.playlistId, line: msg.line },
+                  }),
+                );
+              } catch {}
             } else if (msg.type === "done") {
               setRefreshStatus(msg.code === 0 ? "done" : "error");
               setNewSongs(msg.newSongs ?? []);
               await reloadSongs();
+              try {
+                window.dispatchEvent(
+                  new CustomEvent("playlist-refresh-done", {
+                    detail: { playlistId: msg.playlistId, code: msg.code, newSongs: msg.newSongs ?? [] },
+                  }),
+                );
+              } catch {}
             }
           } catch {
             if (line.trim()) appendLog(line);
